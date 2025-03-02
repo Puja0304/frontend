@@ -3,6 +3,14 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { Link } from "react-router-dom";
 
+// const token = localStorage.getItem("token");
+
+// const response = await axios.get("http://localhost:5173/api/transactions", {
+//   headers: {
+//     "x-auth-token": token,
+//   },
+// });
+
 const HomePage = () => {
   return (
     <div className="home-page">

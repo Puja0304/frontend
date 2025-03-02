@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; 
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
@@ -8,60 +9,104 @@ const DashboardPage = () => {
   const [transactionName, setTransactionName] = useState("");
   const [transactionAmount, setTransactionAmount] = useState("");
   const [transactionType, setTransactionType] = useState("income");
+  const navigate = useNavigate();
 
-  // Add a new transaction
-  const handleAddTransaction = (e) => {
-    e.preventDefault();
-    if (!transactionName || !transactionAmount) return;
-
-    const newTransaction = {
-      id: Date.now(),
-      name: transactionName,
-      amount: parseFloat(transactionAmount),
-      type: transactionType,
+  // Fetch transactions from the backend
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/transactions", {
+          headers: {
+            "x-auth-token": token,
+          },
+        });
+        setTransactions(response.data);
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+      }
     };
 
-    setTransactions([...transactions, newTransaction]);
-    setTransactionName("");
-    setTransactionAmount("");
+    fetchTransactions();
+  }, []);
+
+  // Add a new transaction
+  const handleAddTransaction = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        "http://localhost:5000/api/transactions",
+        {
+          name: transactionName,
+          amount: transactionAmount,
+          type: transactionType,
+        },
+        {
+          headers: {
+            "x-auth-token": token,
+          },
+        }
+      );
+
+      setTransactions([...transactions, response.data]);
+      setTransactionName("");
+      setTransactionAmount("");
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+    }
   };
 
   // Delete a transaction
-  const handleDeleteTransaction = (id) => {
-    setTransactions(transactions.filter((transaction) => transaction.id !== id));
+  const handleDeleteTransaction = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/transactions/${id}`, {
+        headers: {
+          "x-auth-token": token,
+        },
+      });
+
+      // Remove the transaction from the local state
+      setTransactions(transactions.filter((transaction) => transaction._id !== id));
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+    }
   };
-
-  // Calculate total income, expenses, and balance
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const balance = totalIncome - totalExpenses;
 
   return (
     <div className="dashboard-page">
       <Header />
       <main className="dashboard-container">
-      
         <h2>Dashboard</h2>
 
         {/* Summary Boxes */}
         <div className="summary-boxes">
           <div className="summary-box income-box">
             <h3>Total Income</h3>
-            <p>${totalIncome.toFixed(2)}</p>
+            <p>${transactions
+              .filter((t) => t.type === "income")
+              .reduce((sum, t) => sum + t.amount, 0)
+              .toFixed(2)}</p>
           </div>
           <div className="summary-box expense-box">
             <h3>Total Expenses</h3>
-            <p>${totalExpenses.toFixed(2)}</p>
+            <p>${transactions
+              .filter((t) => t.type === "expense")
+              .reduce((sum, t) => sum + t.amount, 0)
+              .toFixed(2)}</p>
           </div>
           <div className="summary-box balance-box">
             <h3>Balance</h3>
-            <p>${balance.toFixed(2)}</p>
+            <p>${(
+              transactions
+                .filter((t) => t.type === "income")
+                .reduce((sum, t) => sum + t.amount, 0) -
+              transactions
+                .filter((t) => t.type === "expense")
+                .reduce((sum, t) => sum + t.amount, 0)
+            ).toFixed(2)}</p>
           </div>
         </div>
 
@@ -108,7 +153,7 @@ const DashboardPage = () => {
           ) : (
             <ul>
               {transactions.map((transaction) => (
-                <li key={transaction.id}>
+                <li key={transaction._id}>
                   <span>{transaction.name}</span>
                   <span
                     className={
@@ -120,7 +165,7 @@ const DashboardPage = () => {
                   </span>
                   <button
                     className="delete-button"
-                    onClick={() => handleDeleteTransaction(transaction.id)}
+                    onClick={() => handleDeleteTransaction(transaction._id)}
                   >
                     Delete
                   </button>
@@ -129,7 +174,6 @@ const DashboardPage = () => {
             </ul>
           )}
         </div>
-        
       </main>
       <Footer />
     </div>

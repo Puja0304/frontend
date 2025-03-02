@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
@@ -10,25 +11,21 @@ const RegisterPage = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
 
-    // Retrieve users from local storage
-    const users = JSON.parse(localStorage.getItem("users")) || [];
+    try {
+      const response = await axios.post("http://localhost:5000/api/auth/register", {
+        name,
+        email,
+        password,
+      });
 
-    // Check if the email is already registered
-    const userExists = users.some((user) => user.email === email);
-
-    if (userExists) {
-      setError("Email already registered");
-    } else {
-      // Add the new user to the list
-      const newUser = { name, email, password };
-      users.push(newUser);
-      localStorage.setItem("users", JSON.stringify(users));
-
-      // Redirect to the login page
-      navigate("/login");
+      const { token } = response.data;
+      localStorage.setItem("token", token); // Save token in local storage
+      navigate("/dashboard"); // Redirect to dashboard
+    } catch (error) {
+      setError("Registration failed. Please try again.");
     }
   };
 
